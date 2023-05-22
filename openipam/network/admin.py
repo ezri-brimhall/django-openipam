@@ -7,9 +7,6 @@ from django.utils import timezone
 from django.contrib import messages
 from django.forms import modelform_factory
 
-# This must be imported, even though it is not directly used, as it allows
-# us to use the net_contained_or_equal lookup type. Flake8 does not like
-# unused imports, so we disable the check for this line.
 from netfields import NetManager  # noqa: F401
 from netaddr import IPNetwork, AddrFormatError
 
@@ -471,7 +468,7 @@ class AddressAdmin(ChangedAdmin):
 
     def get_queryset(self, request):
         qs = super(AddressAdmin, self).get_queryset(request)
-        return qs.select_related("host", "network", "changed_by").all()
+        return qs.select_related("host", "network", "changed_by")
 
 
 class BuildingAdmin(ChangedAdmin):
