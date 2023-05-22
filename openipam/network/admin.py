@@ -468,7 +468,7 @@ class AddressAdmin(ChangedAdmin):
 
     def get_queryset(self, request):
         qs = super(AddressAdmin, self).get_queryset(request)
-        return qs.select_related("host", "network", "changed_by")
+        return qs.select_related("host", "network", "changed_by").all()
 
 
 class BuildingAdmin(ChangedAdmin):
