@@ -259,17 +259,37 @@ class RenewalStatsView(APIView):
 
         notified_unrenewed = list(
             notified.filter(changed__lt=F("last_notified"))
+            .select_related("mac_history")
             .order_by("-expires")
             .annotate(list=Value("notified_unrenewed", output_field=CharField()))
-            .values("hostname", "mac", "expires", "last_notified", "changed", "list")
+            .annotate(last_seen=F("mac_history__stopstamp"))
+            .values(
+                "hostname",
+                "mac",
+                "expires",
+                "last_notified",
+                "changed",
+                "last_seen",
+                "list",
+            )
         )
 
         notified_renewed = list(
             notified.exclude(changed_by=admin_user)
+            .select_related("mac_history")
             .exclude(changed__lt=F("last_notified"))
             .order_by("-expires")
             .annotate(list=Value("notified_renewed", output_field=CharField()))
-            .values("hostname", "mac", "expires", "last_notified", "changed", "list")
+            .annotate(last_seen=F("mac_history__stopstamp"))
+            .values(
+                "hostname",
+                "mac",
+                "expires",
+                "last_notified",
+                "changed",
+                "last_seen",
+                "list",
+            )
         )
 
         # Serialize EUI to string

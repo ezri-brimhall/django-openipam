@@ -69,19 +69,71 @@ function update_manual_table(data) {
 	const tbody = table.querySelector('tbody');
 	tbody.innerHTML = '';
 	data.forEach((row) => {
+		const last_seen = (() => {
+			console.log(row.last_seen == null);
+			if (row.last_seen == null) {
+				return '<span class="text-danger">No data</span>';
+			}
+			return format_time(row.last_seen);
+		})();
 		const tr = document.createElement('tr');
-		tr.innerHTML = `
-			<td>${row.hostname}</td>
-			<td>${row.mac}</td>
-			<td>${format_time(row.expires)}</td>
-			<td>${format_time(row.changed)}</td>
-		`;
+		if (row.last_seen == null) {
+			tr.classList.add('table-danger');
+		}
+		const hostname_td = document.createElement('td');
+		hostname_td.textContent = row.hostname;
+		const mac_td = document.createElement('td');
+		mac_td.textContent = row.mac;
+		const expires_td = document.createElement('td');
+		expires_td.textContent = format_time(row.expires);
+		const changed_td = document.createElement('td');
+		changed_td.textContent = format_time(row.changed);
+		const last_seen_td = document.createElement('td');
+		last_seen_td.innerHTML = last_seen;
+		const delete_td = document.createElement('td');
+		const delete_button = document.createElement('button');
+		delete_button.type = 'button';
+		delete_button.classList.add(
+			'btn',
+			row.last_seen == null ? 'btn-danger' : 'btn-default'
+		);
+		delete_button.id = `delete-${row.hostname}`;
+		// Only allow deletion if device doesn't have last_seen data
+		delete_button.disabled = row.last_seen != null;
+		delete_button.innerHTML =
+			'<span class="glyphicon glyphicon-trash" aria-label="Delete"/>';
+		delete_button.addEventListener('click', () => {
+			// Confirm deletion
+			if (!confirm(`Really delete host ${row.hostname}?`)) {
+				return;
+			}
+			$.ajax({
+				url: `/api/hosts/${row.mac}/delete/`,
+				type: 'POST',
+				success: () => {
+					tr.remove();
+				},
+				error: (jqXHR, textStatus, errorThrown) => {
+					alert(
+						`Error deleting host ${row.hostname}: ${textStatus} ${errorThrown}`
+					);
+				},
+			});
+		});
+		delete_td.appendChild(delete_button);
+		tr.appendChild(hostname_td);
+		tr.appendChild(mac_td);
+		tr.appendChild(expires_td);
+		tr.appendChild(changed_td);
+		tr.appendChild(last_seen_td);
+		tr.appendChild(delete_td);
+		tbody.appendChild(tr);
 		tbody.appendChild(tr);
 	});
 	if (data.length === 0) {
 		const tr = document.createElement('tr');
 		tr.innerHTML =
-			'<td colspan="4">No soon-to-expire hosts were manually renewed in the specified timeframe.</td>';
+			'<td colspan="6">No soon-to-expire hosts were manually renewed in the specified timeframe.</td>';
 		tbody.appendChild(tr);
 	}
 }
@@ -91,19 +143,69 @@ function update_unrenewed_table(data) {
 	const tbody = table.querySelector('tbody');
 	tbody.innerHTML = '';
 	data.forEach((row) => {
+		const last_seen = (() => {
+			if (row.last_seen == null) {
+				return '<span class="text-danger">No data</span>';
+			}
+			return format_time(row.last_seen);
+		})();
 		const tr = document.createElement('tr');
-		tr.innerHTML = `
-			<td>${row.hostname}</td>
-			<td>${row.mac}</td>
-			<td>${format_time(row.expires)}</td>
-			<td>${format_time(row.last_notified)}</td>
-		`;
+		const hostname_td = document.createElement('td');
+		hostname_td.textContent = row.hostname;
+		const mac_td = document.createElement('td');
+		mac_td.textContent = row.mac;
+		const expires_td = document.createElement('td');
+		expires_td.textContent = format_time(row.expires);
+		const last_notified_td = document.createElement('td');
+		last_notified_td.textContent = format_time(row.last_notified);
+		const last_seen_td = document.createElement('td');
+		last_seen_td.innerHTML = last_seen;
+		const renew_td = document.createElement('td');
+		const renew_button = document.createElement('button');
+		renew_button.type = 'button';
+		renew_button.classList.add('btn', 'btn-primary');
+		renew_button.id = `renew-${row.hostname}`;
+		renew_button.innerHTML =
+			'<span class="glyphicon glyphicon-refresh" aria-label="Renew"/>';
+		renew_button.addEventListener('click', () => {
+			if (
+				row.last_seen == null &&
+				!confirm(
+					`Host ${row.hostname} hasn't been seen in a while. Are you sure you want to renew it?`
+				)
+			) {
+				return;
+			}
+			$.ajax({
+				url: `/api/hosts/${row.mac}/renew/`,
+				type: 'POST',
+				dataType: 'json',
+				data: {
+					expire_days: '30',
+				},
+				success: () => {
+					tr.remove();
+				},
+				error: (jqXHR, textStatus, errorThrown) => {
+					alert(
+						`Error renewing host ${row.hostname}: ${textStatus} ${errorThrown}`
+					);
+				},
+			});
+		});
+		renew_td.appendChild(renew_button);
+		tr.appendChild(hostname_td);
+		tr.appendChild(mac_td);
+		tr.appendChild(expires_td);
+		tr.appendChild(last_notified_td);
+		tr.appendChild(last_seen_td);
+		tr.appendChild(renew_td);
 		tbody.appendChild(tr);
 	});
 	if (data.length === 0) {
 		const tr = document.createElement('tr');
 		tr.innerHTML =
-			'<td colspan="4">No unrenewed hosts had notifications sent in the specified timeframe.</td>';
+			'<td colspan="6">No unrenewed hosts had notifications sent in the specified timeframe.</td>';
 		tbody.appendChild(tr);
 	}
 }
